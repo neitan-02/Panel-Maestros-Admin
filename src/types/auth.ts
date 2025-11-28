@@ -1,18 +1,26 @@
-  export type UserRole = 'Maestro' | 'admin';
+export type UserRole = 'maestro' | 'admin';
 
-  export interface Maestro {
+export interface Maestro {
   id: string;
   username: string;
   email: string;
   cct?: string;
   grado?: string;
-  role: UserRole;
+  role: 'maestro'; 
   codigo_ninos?: string;
   codigo_expira?: Date;
   createdAt: Date;
-  }
+}
 
-  export interface User {
+export interface Admin {
+  id: string;
+  username: string;
+  email: string;
+  role: 'admin'; 
+  createdAt: Date;
+}
+
+export interface User {
   id: string;
   username: string;
   email: string;
@@ -20,7 +28,7 @@
   grado: string;
   codigo_maestro?: string;
   maestro?: string;
-  }
+}
 
 export interface Student {
   id: string;

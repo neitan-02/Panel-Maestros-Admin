@@ -1,18 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { User, Student, SupportTicket } from '../types/auth';
+import { User, Student, SupportTicket, Admin as AdminType } from '../types/auth';
 import { LogOut, Users, BookOpen, Settings, Key, Search, Eye, MessageSquare, AlertTriangle, Clock, CheckCircle, XCircle, Filter, Send, Reply, HelpCircle, Shield, Menu, X as XIcon } from 'lucide-react';
 import ChangePasswordModal from '../modals/ChangePasswordModal';
 import SupportTicketModal from '../modals/SupportTicketModal';
 import CreateTicketModal from '../modals/CreateTicketModal';
 import RespondTicketModal from '../modals/RespondTicketModal';
 import TourGuide from './TourGuide';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
-interface AdminDashboardProps {
-  user: User;
-  onLogout: () => void;
-}
+// Interface simplificada - ya no recibimos user como prop
+interface AdminDashboardProps {}
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = () => {
+  const { user, logout } = useAuth(); 
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('teachers');
   const [users, setUsers] = useState<User[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -28,6 +30,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Función mejorada para manejar el logout
+  const handleLogout = () => {
+    console.log("Iniciando proceso de logout...");
+    
+    // Ejecutar el logout del contexto
+    logout();
+    
+    // Redirigir inmediatamente al login
+    navigate('/login');
+  };
 
   useEffect(() => {
     // Load data from localStorage
@@ -247,14 +260,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                         <Users className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{teacher.name}</h4>
+                        <h4 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{teacher.username}</h4>
                         <p className="text-sm text-gray-600 truncate">{teacher.email}</p>
                         <div className="flex flex-wrap gap-2 mt-2">
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            {teacher.grade}
+                            {teacher.grado || 'Sin grado'}
                           </span>
                           <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            CCT: {teacher.cct}
+                            CCT: {teacher.cct || 'No especificado'}
                           </span>
                         </div>
                       </div>
@@ -327,17 +340,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
                           <h4 className="text-base sm:text-lg font-semibold text-gray-900 truncate">{student.name}</h4>
                           <p className="text-sm text-gray-600">{student.grade}</p>
                           {teacher && (
-                            <p className="text-xs text-gray-500">Maestro: {teacher.name}</p>
+                            <p className="text-xs text-gray-500">Maestro: {teacher.username}</p>
                           )}
                         </div>
                       </div>
                       <button
                         onClick={() => setShowChangePassword({ 
                           id: student.id, 
-                          name: student.name, 
+                          username: student.name, 
                           email: `${student.name.toLowerCase().replace(' ', '.')}@alumno.edu`,
                           role: 'teacher',
-                          grade: student.grade,
+                          grado: student.grade,
                           createdAt: new Date()
                         } as User)}
                         className="flex items-center justify-center px-4 py-2 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl hover:from-orange-700 hover:to-red-700 transition-all duration-200 shadow-lg hover:shadow-xl text-sm font-medium hover:-translate-y-0.5 w-full sm:w-auto"
@@ -498,6 +511,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
     </div>
   );
 
+  // Verificar si user está disponible
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando información del administrador...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
@@ -511,7 +536,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-lg sm:text-xl font-bold text-gray-900">Panel de Administración</h1>
-                <p className="text-xs sm:text-sm text-gray-500">Bienvenido, {user.name}</p>
+                <p className="text-xs sm:text-sm text-gray-500">Bienvenido, {user.username || user.email}</p>
               </div>
               <div className="sm:hidden">
                 <h1 className="text-lg font-bold text-gray-900">Admin</h1>
@@ -549,7 +574,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
               </button>
               
               <button
-                onClick={onLogout}
+                onClick={handleLogout}
                 className="hidden sm:flex items-center px-3 sm:px-4 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all duration-200 hover:shadow-md text-sm"
               >
                 <LogOut className="w-4 h-4 mr-2" />
@@ -563,7 +588,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ user, onLogout }) => {
             <div className="sm:hidden border-t border-gray-200 bg-white">
               <div className="px-2 pt-2 pb-3 space-y-1">
                 <button
-                  onClick={onLogout}
+                  onClick={handleLogout}
                   className="flex items-center w-full px-3 py-2 text-gray-700 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors text-sm"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
