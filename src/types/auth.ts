@@ -6,7 +6,7 @@ export interface Maestro {
   email: string;
   cct?: string;
   grado?: string;
-  role: 'maestro'; 
+  role: 'admin' | 'maestro';
   codigo_ninos?: string;
   codigo_expira?: Date;
   createdAt: Date;

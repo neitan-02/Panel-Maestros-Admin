@@ -1,186 +1,204 @@
-import React from 'react';
-import { Student, MathBlock } from '../types/auth';
-import { X, Download, FileText, TrendingUp } from 'lucide-react';
+// StudentReportModal.tsx - Actualizado
+import React, { useRef } from 'react';
+import { User } from '../types/auth';
+import { 
+  X, Download, Printer, FileText, BarChart3, Trophy, 
+  Clock, Award, CheckCircle, AlertCircle, Star, Zap 
+} from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface StudentReportModalProps {
-  student: Student;
-  mathBlocks: MathBlock[];
+  student: User;
+  mathBlocks: any[];
+  studentProgress?: any;
   onClose: () => void;
 }
 
-const StudentReportModal: React.FC<StudentReportModalProps> = ({ student, mathBlocks, onClose }) => {
-  const getOverallProgress = () => {
-    const total = Object.values(student.progress).reduce((sum, progress) => sum + progress, 0);
-    return Math.round(total / 6);
-  };
+const StudentReportModal: React.FC<StudentReportModalProps> = ({
+  student,
+  mathBlocks,
+  studentProgress,
+  onClose
+}) => {
+  const reportRef = useRef<HTMLDivElement>(null);
 
-  const getProgressStatus = (progress: number) => {
-    if (progress >= 90) return { status: 'Excelente', color: 'text-green-600 bg-green-50' };
-    if (progress >= 70) return { status: 'Bueno', color: 'text-blue-600 bg-blue-50' };
-    if (progress >= 50) return { status: 'Regular', color: 'text-yellow-600 bg-yellow-50' };
-    return { status: 'Necesita Apoyo', color: 'text-red-600 bg-red-50' };
-  };
+  const generateDetailedPDF = async () => {
+    if (!reportRef.current) return;
 
-  const generatePDFReport = () => {
-    // Simulate PDF generation
-    const reportData = {
-      student: student.name,
-      grade: student.grade,
-      overallProgress: getOverallProgress(),
-      blocks: mathBlocks.map(block => ({
-        name: block.name,
-        progress: student.progress[`block${block.id}` as keyof Student['progress']],
-        status: getProgressStatus(student.progress[`block${block.id}` as keyof Student['progress']]).status
-      })),
-      date: new Date().toLocaleDateString('es-MX', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-      })
-    };
-
-    // In a real application, you would generate an actual PDF here
-    console.log('Generating PDF with data:', reportData);
+    const canvas = await html2canvas(reportRef.current, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    });
     
-    // Simulate download
-    alert(`Reporte PDF generado para ${student.name}\n\nEn una aplicación real, aquí se descargaría el archivo PDF con todos los detalles del progreso del estudiante.`);
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('portrait', 'mm', 'a4');
+    const imgWidth = 190;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, imgHeight);
+    pdf.save(`reporte_detallado_${student.username}.pdf`);
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center">
-            <div className="bg-blue-100 p-2 rounded-lg mr-3">
-              <FileText className="w-5 h-5 text-blue-600" />
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Encabezado */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <FileText className="w-8 h-8" />
+              <div>
+                <h2 className="text-2xl font-bold">Reporte Detallado</h2>
+                <p className="text-blue-100">{student.username} - {student.grado}</p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Reporte de Progreso</h2>
-              <p className="text-sm text-gray-500">{student.name} - {student.grade}</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={generateDetailedPDF}
+                className="flex items-center px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-colors"
+              >
+                <Download className="w-5 h-5 mr-2" />
+                PDF
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {/* Overall Progress */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl mb-6">
-            <div className="flex items-center justify-between">
+        {/* Contenido del reporte */}
+        <div ref={reportRef} className="flex-1 overflow-y-auto p-6">
+          {/* Información del estudiante */}
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-2xl mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Progreso General</h3>
-                <p className="text-3xl font-bold text-blue-600">{getOverallProgress()}%</p>
-                <p className={`inline-block px-3 py-1 rounded-full text-sm font-medium mt-2 ${getProgressStatus(getOverallProgress()).color}`}>
-                  {getProgressStatus(getOverallProgress()).status}
+                <h3 className="font-bold text-gray-800">Información Personal</h3>
+                <p className="text-gray-600">Nombre: {student.username}</p>
+                <p className="text-gray-600">Grado: {student.grado}</p>
+                <p className="text-gray-600">Email: {student.email}</p>
+              </div>
+              <div>
+                <h3 className="font-bold text-gray-800">Progreso General</h3>
+                <p className="text-gray-600">
+                  Avance: {studentProgress?.progresoGeneral || 0}%
+                </p>
+                <p className="text-gray-600">
+                  Tareas: {studentProgress?.totalTareasCompletadas || 0} completadas
+                </p>
+                <p className="text-gray-600">
+                  Puntaje: {studentProgress?.totalPuntaje || 0} puntos
                 </p>
               </div>
-              <div className="bg-blue-100 p-3 rounded-full">
-                <TrendingUp className="w-8 h-8 text-blue-600" />
+              <div>
+                <h3 className="font-bold text-gray-800">Desempeño</h3>
+                <div className="flex items-center">
+                  {studentProgress?.necesitaAyuda ? (
+                    <div className="flex items-center text-red-600">
+                      <AlertCircle className="w-5 h-5 mr-2" />
+                      Necesita apoyo
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-green-600">
+                      <CheckCircle className="w-5 h-5 mr-2" />
+                      Buen desempeño
+                    </div>
+                  )}
+                </div>
+                <p className="text-gray-600">
+                  Logros: {studentProgress?.logros || 0} obtenidos
+                </p>
+                <p className="text-gray-600">
+                  Tiempo: {Math.floor((studentProgress?.tiempoTotal || 0) / 60)} horas
+                </p>
               </div>
             </div>
           </div>
 
-          {/* Detailed Progress by Block */}
-          <div className="space-y-4 mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Progreso por Bloque Matemático</h3>
-            {mathBlocks.map(block => {
-              const blockKey = `block${block.id}` as keyof Student['progress'];
-              const progress = student.progress[blockKey];
-              const status = getProgressStatus(progress);
-
-              return (
-                <div key={block.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <h4 className="font-medium text-gray-900">Bloque {block.id}: {block.name}</h4>
-                      <p className="text-sm text-gray-500">{block.topics.join(', ')}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-gray-900">{progress}%</p>
-                      <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
-                        {status.status}
+          {/* Progreso por bloques */}
+          <div className="mb-6">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <BarChart3 className="w-6 h-6 mr-2 text-blue-600" />
+              Progreso por Bloques
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {studentProgress?.bloques?.map((bloque: any) => {
+                const blockInfo = mathBlocks.find(b => b.id === bloque.bloque);
+                return (
+                  <div key={bloque.bloque} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center">
+                        {blockInfo?.icon && (
+                          <div className={`p-2 rounded-lg bg-gradient-to-r ${blockInfo.color} mr-3`}>
+                            <blockInfo.icon className="w-5 h-5 text-white" />
+                          </div>
+                        )}
+                        <div>
+                          <h4 className="font-bold text-gray-800">Bloque {bloque.bloque}</h4>
+                          <p className="text-sm text-gray-600">{blockInfo?.name}</p>
+                        </div>
+                      </div>
+                      <span className={`text-lg font-bold ${
+                        bloque.porcentaje >= 80 ? 'text-green-600' :
+                        bloque.porcentaje >= 50 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {bloque.porcentaje}%
                       </span>
                     </div>
+                    <div className="space-y-2">
+                      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-2 rounded-full ${
+                            bloque.porcentaje >= 80 ? 'bg-green-500' :
+                            bloque.porcentaje >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${bloque.porcentaje}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-sm text-gray-600">
+                        <span>Tareas: {bloque.completado}/{bloque.total}</span>
+                        <span>Puntos: {bloque.puntajeTotal}</span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className={`h-3 rounded-full transition-all ${
-                        progress >= 90 ? 'bg-green-500' :
-                        progress >= 70 ? 'bg-blue-500' :
-                        progress >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}
-                      style={{ width: `${progress}%` }}
-                    ></div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Recommendations */}
-          <div className="bg-gray-50 p-4 rounded-lg mb-6">
-            <h3 className="font-medium text-gray-900 mb-2">Recomendaciones</h3>
-            <ul className="text-sm text-gray-600 space-y-1">
-              {getOverallProgress() >= 90 && (
-                <li>• Excelente desempeño. Continúa con actividades de enriquecimiento.</li>
-              )}
-              {getOverallProgress() >= 70 && getOverallProgress() < 90 && (
-                <li>• Buen progreso. Reforzar áreas con menor puntuación.</li>
-              )}
-              {getOverallProgress() >= 50 && getOverallProgress() < 70 && (
-                <li>• Requiere apoyo adicional en varios bloques matemáticos.</li>
-              )}
-              {getOverallProgress() < 50 && (
-                <li>• Necesita atención individualizada y plan de apoyo específico.</li>
-              )}
-              
-              {mathBlocks.map(block => {
-                const blockKey = `block${block.id}` as keyof Student['progress'];
-                const progress = student.progress[blockKey];
-                if (progress < 70) {
-                  return (
-                    <li key={block.id}>
-                      • Reforzar {block.name.toLowerCase()}: {block.topics.join(', ')}
-                    </li>
-                  );
-                }
-                return null;
+                );
               })}
-            </ul>
+            </div>
           </div>
 
-          {/* Report Info */}
-          <div className="text-sm text-gray-500">
-            <p>Reporte generado el: {new Date().toLocaleDateString('es-MX', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}</p>
-            <p>Última actualización: {new Date(student.lastUpdated).toLocaleDateString('es-MX')}</p>
+          {/* Recomendaciones */}
+          <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-6 rounded-2xl border border-yellow-200">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+              <Star className="w-6 h-6 mr-2 text-yellow-600" />
+              Recomendaciones
+            </h3>
+            {studentProgress?.progresoGeneral >= 80 ? (
+              <div className="space-y-3">
+                <p className="text-gray-700">🌟 <strong>Excelente trabajo!</strong> El estudiante está avanzando muy bien.</p>
+                <p className="text-gray-700">✅ Continuar con el ritmo actual de aprendizaje.</p>
+                <p className="text-gray-700">🎯 Considerar desafíos más avanzados en los bloques dominados.</p>
+              </div>
+            ) : studentProgress?.progresoGeneral >= 50 ? (
+              <div className="space-y-3">
+                <p className="text-gray-700">📈 <strong>Buen progreso.</strong> El estudiante mantiene un avance constante.</p>
+                <p className="text-gray-700">✅ Continuar con la práctica regular.</p>
+                <p className="text-gray-700">🎯 Enfocarse en los bloques con menor porcentaje de avance.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-gray-700">🎯 <strong>Se requiere atención adicional.</strong> El estudiante necesita más apoyo.</p>
+                <p className="text-gray-700">✅ Recomendar 30 minutos de práctica diaria.</p>
+                <p className="text-gray-700">🎯 Revisar los conceptos básicos de los bloques con menor avance.</p>
+                <p className="text-gray-700">✅ Programar sesiones de apoyo individualizado.</p>
+              </div>
+            )}
           </div>
-        </div>
-
-        <div className="flex gap-3 p-6 border-t border-gray-200 bg-gray-50">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
-          >
-            Cerrar
-          </button>
-          <button
-            onClick={generatePDFReport}
-            className="flex-1 flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Descargar PDF
-          </button>
         </div>
       </div>
     </div>

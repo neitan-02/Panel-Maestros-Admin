@@ -1,352 +1,343 @@
-import React, { useState } from 'react';
-import { Student, MathBlock, User } from '../types/auth';
-import { X, Download, FileText, Users, TrendingUp, BarChart3, Award, AlertTriangle, Calendar } from 'lucide-react';
+import React, { useState } from "react";
+import { FileText, X as XIcon, Users, UserIcon } from "lucide-react";
+import jsPDF from "jspdf";
 
-interface BulkReportModalProps {
-  students: Student[];
-  mathBlocks: MathBlock[];
-  teacher: User;
+interface User {
+  id: string;
+  username: string;
+  grado: string;
+}
+
+interface ProgresoBloque {
+  nombre: string;
+  porcentaje: number;
+  completado: number;
+  total: number;
+  puntajeTotal: number;
+}
+
+interface ProgresoUsuario {
+  usuarioId: string;
+  nombre: string;
+  grado: string;
+  progresoGeneral: number;
+  bloques: ProgresoBloque[];
+  totalTareasCompletadas: number;
+  totalPuntaje: number;
+  logros: number;
+  necesitaAyuda: boolean;
+}
+
+interface Props {
+  students: User[];
+  mathBlocks: any[];
+  teacher: any;
+  studentProgress: ProgresoUsuario[];
   onClose: () => void;
 }
 
-const BulkReportModal: React.FC<BulkReportModalProps> = ({ 
-  students, 
-  mathBlocks, 
-  teacher, 
-  onClose 
+// ---------------------- UTILIDADES ----------------------
+
+const loadImage = (src: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = src;
+    img.onload = () => resolve(img);
+    img.onerror = (err) => reject(err);
+  });
+};
+
+const primaryColor = "#2C6BED";
+
+// ---------------------- COMPONENTE ----------------------
+
+const BulkReportModal: React.FC<Props> = ({
+  students,
+  mathBlocks,
+  teacher,
+  studentProgress,
+  onClose,
 }) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [reportType, setReportType] = useState<'summary' | 'detailed'>('summary');
+  const [loading, setLoading] = useState(false);
+  const [reportType, setReportType] =
+    useState<"general" | "individual">("general");
+  const [selectedStudent, setSelectedStudent] = useState("all");
 
-  const getOverallClassProgress = () => {
-    if (students.length === 0) return 0;
-    const totalProgress = students.reduce((sum, student) => {
-      const studentAvg = Object.values(student.progress).reduce((a, b) => a + b, 0) / 6;
-      return sum + studentAvg;
-    }, 0);
-    return Math.round(totalProgress / students.length);
-  };
+  // Estadísticas generales de la clase
+  const classStats = (() => {
+    if (!studentProgress.length) return null;
 
-  const getBlockAverages = () => {
-    if (students.length === 0) return {};
-    const blockAverages: Record<string, number> = {};
-    for (let i = 1; i <= 6; i++) {
-      const blockKey = `block${i}` as keyof Student['progress'];
-      const total = students.reduce((sum, student) => sum + student.progress[blockKey], 0);
-      blockAverages[`block${i}`] = Math.round(total / students.length);
-    }
-    return blockAverages;
-  };
+    const avg = (field: keyof ProgresoUsuario) =>
+      Math.round(
+        studentProgress.reduce((a, b) => a + (b[field] as number), 0) /
+          studentProgress.length
+      );
 
-  const getTopPerformers = () => {
-    return students
-      .map(student => ({
-        ...student,
-        avgProgress: Math.round(Object.values(student.progress).reduce((a, b) => a + b, 0) / 6)
-      }))
-      .sort((a, b) => b.avgProgress - a.avgProgress)
-      .slice(0, 5);
-  };
+    const completedTasks = studentProgress.reduce(
+      (a, b) => a + b.totalTareasCompletadas,
+      0
+    );
+    const totalTasks =
+      mathBlocks.reduce((a, b) => a + b.totalTareas, 0) *
+      studentProgress.length;
 
-  const getStudentsNeedingHelp = () => {
-    return students
-      .map(student => ({
-        ...student,
-        avgProgress: Math.round(Object.values(student.progress).reduce((a, b) => a + b, 0) / 6)
-      }))
-      .filter(student => student.avgProgress < 70)
-      .sort((a, b) => a.avgProgress - b.avgProgress);
-  };
+    return {
+      averageProgress: avg("progresoGeneral"),
+      averageScore: avg("totalPuntaje"),
+      completionRate: Math.round((completedTasks / totalTasks) * 100),
+    };
+  })();
 
-  const getProgressDistribution = () => {
-    const distribution = { excellent: 0, good: 0, regular: 0, needsHelp: 0 };
-    students.forEach(student => {
-      const avgProgress = Math.round(Object.values(student.progress).reduce((a, b) => a + b, 0) / 6);
-      if (avgProgress >= 90) distribution.excellent++;
-      else if (avgProgress >= 70) distribution.good++;
-      else if (avgProgress >= 50) distribution.regular++;
-      else distribution.needsHelp++;
-    });
-    return distribution;
-  };
+  // ---------------------- PDF INDIVIDUAL ----------------------
 
-  const generateBulkPDF = async () => {
-    setIsGenerating(true);
-    
+  const generateIndividualPDF = async (
+    student: User,
+    progress?: ProgresoUsuario
+  ) => {
+    setLoading(true);
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate PDF generation
-      
-      const reportData = {
-        teacher: {
-          name: teacher.name,
-          grade: teacher.grade,
-          cct: teacher.cct,
-          email: teacher.email
-        },
-        classStats: {
-          totalStudents: students.length,
-          overallProgress: getOverallClassProgress(),
-          blockAverages: getBlockAverages(),
-          distribution: getProgressDistribution()
-        },
-        topPerformers: getTopPerformers(),
-        studentsNeedingHelp: getStudentsNeedingHelp(),
-        detailedStudents: reportType === 'detailed' ? students.map(student => ({
-          name: student.name,
-          grade: student.grade,
-          progress: student.progress,
-          overallProgress: Math.round(Object.values(student.progress).reduce((a, b) => a + b, 0) / 6),
-          lastUpdated: student.lastUpdated
-        })) : [],
-        mathBlocks: mathBlocks,
-        generatedAt: new Date().toISOString(),
-        reportType
-      };
+      const doc = new jsPDF("portrait", "pt", "letter");
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
 
-      console.log('Generating bulk PDF with data:', reportData);
-      
-      alert(`¡Reporte ${reportType === 'summary' ? 'Resumen' : 'Detallado'} generado exitosamente!\n\n` +
-            `📊 Total de alumnos: ${students.length}\n` +
-            `📈 Progreso promedio: ${getOverallClassProgress()}%\n` +
-            `🏆 Estudiantes destacados: ${getTopPerformers().length}\n` +
-            `⚠️ Necesitan apoyo: ${getStudentsNeedingHelp().length}\n\n` +
-            `En una aplicación real, aquí se descargaría el archivo PDF completo con todos los datos de la clase.`);
-      
-      onClose();
-    } catch (error) {
-      alert('Error al generar el reporte. Intenta de nuevo.');
+      // Fondo
+      try {
+        const bg = await loadImage("/logo.png");
+        doc.addImage(bg, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
+      } catch {}
+
+      // Título
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(26);
+      doc.setTextColor(primaryColor);
+      doc.text("📘 Reporte Individual de Progreso", pageWidth / 2, 60, {
+        align: "center",
+      });
+
+      doc.setDrawColor(primaryColor);
+      doc.setLineWidth(2);
+      doc.line(40, 80, pageWidth - 40, 80);
+
+      // Info general
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(13);
+      doc.setTextColor("#000");
+
+      let y = 110;
+      const m = 40;
+
+      doc.text(`👤 Estudiante: ${student.username}`, m, y);
+      y += 18;
+      doc.text(`🎓 Grado: ${student.grado}`, m, y);
+      y += 18;
+      doc.text(`👨‍🏫 Maestro: ${teacher?.username}`, m, y);
+
+      y += 30;
+
+      // Resumen
+      if (progress) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("📊 Resumen del Progreso", m, y);
+        y += 20;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(13);
+
+        doc.text(`Progreso General: ${progress.progresoGeneral}%`, m, y);
+        y += 16;
+        doc.text(
+          `Tareas Completadas: ${progress.totalTareasCompletadas}`,
+          m,
+          y
+        );
+        y += 16;
+        doc.text(`Puntaje Total: ${progress.totalPuntaje}`, m, y);
+        y += 30;
+
+        // Bloques
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("📚 Detalle por Bloques", m, y);
+        y += 20;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(12);
+
+        progress.bloques.forEach((b) => {
+          doc.text(
+            `• ${b.nombre}: ${b.porcentaje}% (${b.completado}/${b.total})`,
+            m,
+            y
+          );
+          y += 16;
+        });
+      }
+
+      doc.save(`reporte_${student.username}.pdf`);
     } finally {
-      setIsGenerating(false);
+      setLoading(false);
     }
   };
 
-  const blockAverages = getBlockAverages();
-  const topPerformers = getTopPerformers();
-  const studentsNeedingHelp = getStudentsNeedingHelp();
-  const distribution = getProgressDistribution();
+  // ---------------------- PDF GENERAL ----------------------
+
+  const generateClassPDF = async () => {
+    setLoading(true);
+
+    try {
+      const doc = new jsPDF("landscape", "pt", "letter");
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Fondo
+      try {
+        const bg = await loadImage("/logo.png");
+        doc.addImage(bg, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
+      } catch {}
+
+      // Título
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(28);
+      doc.setTextColor(primaryColor);
+      doc.text("📘 Reporte General de la Clase", pageWidth / 2, 60, {
+        align: "center",
+      });
+
+      doc.setDrawColor(primaryColor);
+      doc.setLineWidth(2);
+      doc.line(50, 80, pageWidth - 50, 80);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(14);
+      doc.setTextColor("#000");
+
+      let y = 115;
+      const m = 50;
+
+      doc.text(`👨‍🏫 Maestro: ${teacher?.username}`, m, y);
+      y += 18;
+      doc.text(`👥 Estudiantes: ${students.length}`, m, y);
+      y += 18;
+      doc.text(`📅 Fecha: ${new Date().toLocaleDateString()}`, m, y);
+      y += 28;
+
+      if (classStats) {
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("📊 Estadísticas Generales", m, y);
+        y += 22;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(13);
+
+        doc.text(
+          `• Progreso Promedio: ${classStats.averageProgress}%`,
+          m,
+          y
+        );
+        y += 16;
+        doc.text(`• Puntaje Promedio: ${classStats.averageScore}`, m, y);
+        y += 16;
+        doc.text(
+          `• Tasa de Finalización: ${classStats.completionRate}%`,
+          m,
+          y
+        );
+      }
+
+      doc.save(`reporte_general.pdf`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ---------------------- GENERAR ----------------------
+
+  const handleGenerate = async () => {
+    if (reportType === "general") return generateClassPDF();
+
+    if (selectedStudent === "all") {
+      for (const s of students) {
+        await generateIndividualPDF(
+          s,
+          studentProgress.find((p) => p.usuarioId === s.id)
+        );
+      }
+    } else {
+      const student = students.find((s) => s.id === selectedStudent);
+      const progress = studentProgress.find(
+        (p) => p.usuarioId === selectedStudent
+      );
+
+      if (student) await generateIndividualPDF(student, progress);
+    }
+  };
+
+  // ---------------------- UI ----------------------
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center">
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-3 rounded-xl mr-4 shadow-lg">
-              <FileText className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Reporte General de la Clase</h2>
-              <p className="text-sm text-gray-600">{teacher.name} - {teacher.grade} - CCT: {teacher.cct}</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-white hover:bg-opacity-50 rounded-xl transition-colors"
-          >
-            <X className="w-6 h-6 text-gray-500" />
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white p-6 rounded-2xl max-w-3xl w-full">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold flex items-center">
+            <FileText className="mr-2" /> Generar Reportes
+          </h2>
+          <button onClick={onClose}>
+            <XIcon />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-          {/* Report Type Selection */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Tipo de Reporte</h3>
-            <div className="flex gap-4">
-              <button
-                onClick={() => setReportType('summary')}
-                className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                  reportType === 'summary'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <BarChart3 className="w-6 h-6 mx-auto mb-2" />
-                <h4 className="font-medium">Reporte Resumen</h4>
-                <p className="text-sm text-gray-600">Estadísticas generales y análisis de clase</p>
-              </button>
-              <button
-                onClick={() => setReportType('detailed')}
-                className={`flex-1 p-4 rounded-xl border-2 transition-all ${
-                  reportType === 'detailed'
-                    ? 'border-blue-500 bg-blue-50 text-blue-700'
-                    : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <Users className="w-6 h-6 mx-auto mb-2" />
-                <h4 className="font-medium">Reporte Detallado</h4>
-                <p className="text-sm text-gray-600">Incluye progreso individual de cada alumno</p>
-              </button>
-            </div>
-          </div>
+        {/* Tipo de reporte */}
+        <div className="space-y-2 mb-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={reportType === "general"}
+              onChange={() => setReportType("general")}
+            />
+            <span className="flex items-center gap-2">
+              <Users className="w-4" /> Reporte General
+            </span>
+          </label>
 
-          {/* Class Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-blue-700">Total Alumnos</p>
-                  <p className="text-2xl font-bold text-blue-900">{students.length}</p>
-                </div>
-                <Users className="w-8 h-8 text-blue-600" />
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-700">Progreso Promedio</p>
-                  <p className="text-2xl font-bold text-green-900">{getOverallClassProgress()}%</p>
-                </div>
-                <TrendingUp className="w-8 h-8 text-green-600" />
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 p-4 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-yellow-700">Destacados</p>
-                  <p className="text-2xl font-bold text-yellow-900">{distribution.excellent + distribution.good}</p>
-                </div>
-                <Award className="w-8 h-8 text-yellow-600" />
-              </div>
-            </div>
-            
-            <div className="bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-xl">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-red-700">Necesitan Apoyo</p>
-                  <p className="text-2xl font-bold text-red-900">{studentsNeedingHelp.length}</p>
-                </div>
-                <AlertTriangle className="w-8 h-8 text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          {/* Block Averages */}
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Promedio por Bloque Matemático</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {mathBlocks.map(block => {
-                const average = blockAverages[`block${block.id}`] || 0;
-                return (
-                  <div key={block.id} className="bg-white border border-gray-200 rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-gray-900">Bloque {block.id}</h4>
-                      <span className={`text-lg font-bold ${
-                        average >= 90 ? 'text-green-600' :
-                        average >= 70 ? 'text-blue-600' :
-                        average >= 50 ? 'text-yellow-600' : 'text-red-600'
-                      }`}>
-                        {average}%
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">{block.name}</p>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          average >= 90 ? 'bg-green-500' :
-                          average >= 70 ? 'bg-blue-500' :
-                          average >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${average}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Top Performers and Students Needing Help */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <Award className="w-5 h-5 text-green-600 mr-2" />
-                Mejores Estudiantes
-              </h3>
-              <div className="space-y-3">
-                {topPerformers.slice(0, 5).map((student, index) => (
-                  <div key={student.id} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs mr-3 ${
-                        index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : 'bg-orange-400'
-                      }`}>
-                        {index + 1}
-                      </div>
-                      <span className="font-medium text-gray-900">{student.name}</span>
-                    </div>
-                    <span className="font-bold text-green-600">{student.avgProgress}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-red-50 to-pink-50 p-6 rounded-xl">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <AlertTriangle className="w-5 h-5 text-red-600 mr-2" />
-                Necesitan Apoyo
-              </h3>
-              <div className="space-y-3">
-                {studentsNeedingHelp.length > 0 ? studentsNeedingHelp.slice(0, 5).map((student) => (
-                  <div key={student.id} className="flex items-center justify-between">
-                    <span className="font-medium text-gray-900">{student.name}</span>
-                    <span className="font-bold text-red-600">{student.avgProgress}%</span>
-                  </div>
-                )) : (
-                  <p className="text-green-600 font-medium">¡Todos los estudiantes van bien!</p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Report Preview Info */}
-          <div className="bg-gray-50 p-4 rounded-xl">
-            <h3 className="font-medium text-gray-900 mb-2 flex items-center">
-              <Calendar className="w-4 h-4 mr-2" />
-              Información del Reporte
-            </h3>
-            <div className="text-sm text-gray-600 space-y-1">
-              <p>• Fecha de generación: {new Date().toLocaleDateString('es-MX', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}</p>
-              <p>• Tipo: {reportType === 'summary' ? 'Reporte Resumen' : 'Reporte Detallado'}</p>
-              <p>• Total de alumnos incluidos: {students.length}</p>
-              <p>• Bloques matemáticos analizados: {mathBlocks.length}</p>
-              {reportType === 'detailed' && (
-                <p>• Incluye progreso individual detallado de cada alumno</p>
-              )}
-            </div>
-          </div>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              checked={reportType === "individual"}
+              onChange={() => setReportType("individual")}
+            />
+            <span className="flex items-center gap-2">
+              <UserIcon className="w-4" /> Reporte Individual
+            </span>
+          </label>
         </div>
 
-        <div className="flex gap-3 p-6 border-t border-gray-200 bg-gray-50">
-          <button
-            onClick={onClose}
-            className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium"
+        {/* Selección de alumno */}
+        {reportType === "individual" && (
+          <select
+            value={selectedStudent}
+            onChange={(e) => setSelectedStudent(e.target.value)}
+            className="w-full p-2 border rounded-xl mb-4"
           >
-            Cancelar
-          </button>
-          <button
-            onClick={generateBulkPDF}
-            disabled={isGenerating || students.length === 0}
-            className="flex-1 flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                Generando PDF...
-              </>
-            ) : (
-              <>
-                <Download className="w-5 h-5 mr-2" />
-                Generar Reporte PDF
-              </>
-            )}
-          </button>
-        </div>
+            <option value="all">Todos los estudiantes</option>
+            {students.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.username}
+              </option>
+            ))}
+          </select>
+        )}
+
+        <button
+          disabled={loading}
+          onClick={handleGenerate}
+          className="w-full p-3 bg-blue-600 text-white rounded-xl"
+        >
+          {loading ? "Generando..." : "Generar Reporte"}
+        </button>
       </div>
     </div>
   );

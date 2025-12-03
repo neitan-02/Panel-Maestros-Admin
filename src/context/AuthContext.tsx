@@ -29,7 +29,7 @@ interface LoginData {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Configuración centralizada de URLs
-const API_BASE_URL = "https://panel-de-control-para-maestros-y-administrador-production.up.railway.app/";
+const API_BASE_URL = "https://api-node-js-production.up.railway.app";
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<Maestro | Admin | null>(null);

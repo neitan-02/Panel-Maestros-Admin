@@ -1,26 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { User, Maestro } from "../types/auth";
 import {
-  Users, FileText, LogOut, Search, Eye, Download, BookOpen, TrendingUp, Calendar, Award, Clock, HelpCircle, Menu, X as XIcon, Copy,
-  Key,
-  UserPlus,
-  RefreshCw,
-  BarChart3,
-  Target,
-  CheckCircle,
-  AlertCircle,
-  Brain,
-  Calculator,
-  Shapes,
-  Ruler,
-  BarChart,
-  Divide,
-  Star,
+  Users,LogOut, Search, Eye, Download, BookOpen, TrendingUp,Clock, Menu, X as XIcon, Copy,
+  Key,RefreshCw,BarChart3,CheckCircle,AlertCircle,Brain,Calculator,Shapes,Ruler,BarChart,Divide,Star,
   Trophy,
-  Zap,
   Sparkles,
-  Rocket,
-  TargetIcon
 } from "lucide-react";
 import StudentReportModal from "../modals/StudentReportModal";
 import BulkReportModal from "../modals/BulkReportModal";
@@ -116,7 +100,7 @@ const TeacherDashboard: React.FC = () => {
       for (const usuarioId of usuarioIds) {
         try {
           // LLAMADA REAL A TU API PARA OBTENER PROGRESO
-          const response = await fetch(`http://3.137.155.2065000/api/progreso/progreso/${usuarioId}`, {
+          const response = await fetch(`https://api-node-js-production.up.railway.app/api/progreso/progreso/${usuarioId}`, {
             headers: {
               'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
@@ -164,7 +148,7 @@ const TeacherDashboard: React.FC = () => {
             // Obtener resumen de puntaje
             let totalPuntaje = 0;
             try {
-              const resumenResponse = await fetch(`http://3.137.155.2065000/api/progreso/${usuarioId}/resumen`, {
+              const resumenResponse = await fetch(`https://api-node-js-production.up.railway.app/api/progreso/${usuarioId}/resumen`, {
                 headers: {
                   'Authorization': `Bearer ${token}`
                 }
@@ -261,7 +245,7 @@ const TeacherDashboard: React.FC = () => {
     
     setLoadingUsuarios(true);
     try {
-      const response = await fetch(`http://3.137.155.2065000/api/maestros/${userId}/users`, {
+      const response = await fetch(`https://api-node-js-production.up.railway.app/api/maestros/${userId}/users`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -331,7 +315,7 @@ const TeacherDashboard: React.FC = () => {
     setError(null);
     
     try {
-      const response = await fetch('http://3.137.155.2065000/api/maestros/generar-codigo', {
+      const response = await fetch('https://api-node-js-production.up.railway.app/api/maestros/generar-codigo', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
