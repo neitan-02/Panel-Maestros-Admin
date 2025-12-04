@@ -20,28 +20,28 @@ export const useLandingPage = () => {
       role: 'Desarrollo Fullstack',
       description: '',
       image: nathanjpg,
-      expertise: ['Pedagogía', 'Matemáticas', 'Liderazgo']
+      expertise: ['Desarrollo', 'UI/UX', 'EdTech']
     },
     {
       name: 'Oscar Bello Chino',
       role: 'QA tester',
       description: '',
       image: oscarjpg,
-      expertise: ['Desarrollo', 'EdTech', 'Innovación']
+      expertise: ['Testing', 'Calidad', 'Soporte']
     },
     {
       name: 'Luis Ángel Bernal Gutiérrez',
       role: 'Desarrollador Frontend',
       description: '',
       image: luisjpg,
-      expertise: ['Currículo', 'Metodología', 'Evaluación']
+      expertise: ['Frontend', 'Diseño', 'Accesibilidad']
     },
     {
       name: 'Ricardo Alexis Sánchez Maya',
       role: 'CEO',
-      description: 'Psicólogo educativo enfocado en el desarrollo cognitivo y emocional de estudiantes.',
+      description: '',
       image: ricardojpg,
-      expertise: ['Psicología', 'Desarrollo', 'Apoyo']
+      expertise: ['Liderazgo', 'Educación']
     }
   ];
 
