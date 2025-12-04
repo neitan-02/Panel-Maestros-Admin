@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+
 export const useLandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [contactForm, setContactForm] = useState({
@@ -12,29 +13,29 @@ export const useLandingPage = () => {
 
   const teamMembers = [
     {
-      name: 'Dr. María Elena Rodríguez',
-      role: 'Directora Académica',
-      description: 'Especialista en pedagogía matemática con 15 años de experiencia en educación primaria.',
+      name: 'Nathan Hernandez Moreno',
+      role: 'Desarrollo Fullstack',
+      description: '',
       image: 'https://images.pexels.com/photos/3769021/pexels-photo-3769021.jpeg?auto=compress&cs=tinysrgb&w=400',
       expertise: ['Pedagogía', 'Matemáticas', 'Liderazgo']
     },
     {
-      name: 'Ing. Carlos Mendoza',
-      role: 'Director de Tecnología',
-      description: 'Experto en desarrollo de plataformas educativas y sistemas de gestión académica.',
+      name: 'Oscar Bello Chino',
+      role: 'QA tester',
+      description: '',
       image: 'https://images.pexels.com/photos/2182970/pexels-photo-2182970.jpeg?auto=compress&cs=tinysrgb&w=400',
       expertise: ['Desarrollo', 'EdTech', 'Innovación']
     },
     {
-      name: 'Lic. Ana Sofía García',
-      role: 'Coordinadora Pedagógica',
-      description: 'Especialista en diseño curricular y metodologías de enseñanza para primaria.',
+      name: 'Luis Ángel Bernal Gutiérrez',
+      role: 'Desarrollador Frontend',
+      description: '',
       image: 'https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=400',
       expertise: ['Currículo', 'Metodología', 'Evaluación']
     },
     {
-      name: 'Psic. Roberto Jiménez',
-      role: 'Especialista en Desarrollo Infantil',
+      name: 'Ricardo Alexis Sánchez Maya',
+      role: 'CEO',
       description: 'Psicólogo educativo enfocado en el desarrollo cognitivo y emocional de estudiantes.',
       image: 'https://images.pexels.com/photos/2182973/pexels-photo-2182973.jpeg?auto=compress&cs=tinysrgb&w=400',
       expertise: ['Psicología', 'Desarrollo', 'Apoyo']

@@ -116,7 +116,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = () => {
       console.log('Perfil admin cargado:', response.data);
     } catch (error: any) {
       console.error('Error al cargar perfil:', error);
-      // Si no hay endpoint /admin/me, no es crítico
     } finally {
       setLoading(prev => ({ ...prev, profile: false }));
     }

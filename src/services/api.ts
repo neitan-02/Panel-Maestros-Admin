@@ -34,25 +34,24 @@ api.interceptors.response.use(
   }
 );
 
-// Servicios para el Admin Dashboard - RUTAS CORRECTAS
 export const adminService = {
-  // Obtener perfil del admin - CORREGIDO: /admin/me
+  // Obtener perfil del admin 
   getProfile: () => api.get('/admin/me'),
   
-  // Obtener todos los maestros - CORREGIDO: /admin/maestros
+  // Obtener todos los maestros 
   getAllMaestros: () => api.get('/admin/maestros'),
   
-  // Obtener todos los usuarios (estudiantes) - CORREGIDO: /admin/users
+  // Obtener todos los usuarios (estudiantes)
   getAllUsers: () => api.get('/admin/users'),
   
-  // Obtener usuarios por maestro - CORREGIDO: /admin/maestro/:id/users
+  // Obtener usuarios por maestro 
   getUsersByMaestro: (maestroId: string) => api.get(`/admin/maestro/${maestroId}/users`),
   
-  // Cambiar contraseña de usuario - CORREGIDO: /admin/user/:id/password
+  // Cambiar contraseña de usuario 
   changeUserPassword: (userId: string, password: string) => 
     api.put(`/admin/user/${userId}/password`, { password }),
   
-  // Cambiar contraseña de maestro - CORREGIDO: /admin/maestro/:id/password
+  // Cambiar contraseña de maestro 
   changeMaestroPassword: (maestroId: string, password: string) => 
     api.put(`/admin/maestro/${maestroId}/password`, { password }),
 };

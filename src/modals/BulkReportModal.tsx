@@ -36,21 +36,16 @@ interface Props {
   onClose: () => void;
 }
 
-// ---------------------- UTILIDADES ----------------------
+const primaryColor = "#2259D7";
+const gray = "#444";
 
-const loadImage = (src: string): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
+const loadImage = (src: string): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous";
     img.src = src;
     img.onload = () => resolve(img);
-    img.onerror = (err) => reject(err);
+    img.onerror = reject;
   });
-};
-
-const primaryColor = "#2C6BED";
-
-// ---------------------- COMPONENTE ----------------------
 
 const BulkReportModal: React.FC<Props> = ({
   students,
@@ -64,7 +59,6 @@ const BulkReportModal: React.FC<Props> = ({
     useState<"general" | "individual">("general");
   const [selectedStudent, setSelectedStudent] = useState("all");
 
-  // Estadísticas generales de la clase
   const classStats = (() => {
     if (!studentProgress.length) return null;
 
@@ -74,22 +68,13 @@ const BulkReportModal: React.FC<Props> = ({
           studentProgress.length
       );
 
-    const completedTasks = studentProgress.reduce(
-      (a, b) => a + b.totalTareasCompletadas,
-      0
-    );
-    const totalTasks =
-      mathBlocks.reduce((a, b) => a + b.totalTareas, 0) *
-      studentProgress.length;
-
     return {
       averageProgress: avg("progresoGeneral"),
       averageScore: avg("totalPuntaje"),
-      completionRate: Math.round((completedTasks / totalTasks) * 100),
     };
   })();
 
-  // ---------------------- PDF INDIVIDUAL ----------------------
+  // ---------------- PDF INDIVIDUAL ----------------
 
   const generateIndividualPDF = async (
     student: User,
@@ -99,80 +84,80 @@ const BulkReportModal: React.FC<Props> = ({
 
     try {
       const doc = new jsPDF("portrait", "pt", "letter");
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
+      const width = doc.internal.pageSize.getWidth();
 
-      // Fondo
+      // Logo
       try {
-        const bg = await loadImage("/logo.png");
-        doc.addImage(bg, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
+        const logo = await loadImage("/logo.png");
+        doc.addImage(logo, "PNG", 40, 30, 80, 80);
       } catch {}
 
-      // Título
+      // Encabezado
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(26);
+      doc.setFontSize(20);
       doc.setTextColor(primaryColor);
-      doc.text("📘 Reporte Individual de Progreso", pageWidth / 2, 60, {
+      doc.text("REPORTE INDIVIDUAL DE PROGRESO", width / 2, 60, {
         align: "center",
       });
 
       doc.setDrawColor(primaryColor);
       doc.setLineWidth(2);
-      doc.line(40, 80, pageWidth - 40, 80);
+      doc.line(40, 90, width - 40, 90);
 
-      // Info general
+      let y = 130;
+
+      // Datos del alumno
+      doc.setFontSize(12);
+      doc.setTextColor(gray);
+      doc.setFont("helvetica", "bold");
+      doc.text("Datos del Estudiante", 40, y);
+      const boxY = y + 10;
+      doc.setDrawColor("#DDD");
+      doc.rect(40, boxY, width - 80, 80);
+
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(13);
-      doc.setTextColor("#000");
+      doc.text(`Nombre: ${student.username}`, 60, boxY + 25);
+      doc.text(`Grado: ${student.grado}`, 60, boxY + 45);
+      doc.text(`Docente: ${teacher?.username}`, 60, boxY + 65);
 
-      let y = 110;
-      const m = 40;
+      y = boxY + 110;
 
-      doc.text(`👤 Estudiante: ${student.username}`, m, y);
-      y += 18;
-      doc.text(`🎓 Grado: ${student.grado}`, m, y);
-      y += 18;
-      doc.text(`👨‍🏫 Maestro: ${teacher?.username}`, m, y);
-
-      y += 30;
-
-      // Resumen
       if (progress) {
+        // Resumen
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.text("📊 Resumen del Progreso", m, y);
-        y += 20;
+        doc.text("Resumen Académico", 40, y);
+        doc.rect(40, y + 10, width - 80, 70);
 
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(13);
-
-        doc.text(`Progreso General: ${progress.progresoGeneral}%`, m, y);
-        y += 16;
+        doc.text(
+          `Progreso General: ${progress.progresoGeneral}%`,
+          60,
+          y + 35
+        );
         doc.text(
           `Tareas Completadas: ${progress.totalTareasCompletadas}`,
-          m,
-          y
+          60,
+          y + 55
         );
-        y += 16;
-        doc.text(`Puntaje Total: ${progress.totalPuntaje}`, m, y);
-        y += 30;
+        doc.text(`Puntaje Total: ${progress.totalPuntaje}`, 350, y + 35);
+
+        y += 120;
 
         // Bloques
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.text("📚 Detalle por Bloques", m, y);
-        y += 20;
+        doc.text("Detalle por Bloques", 40, y);
+        doc.rect(40, y + 10, width - 80, 260);
 
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(12);
+        let blockY = y + 35;
 
         progress.bloques.forEach((b) => {
           doc.text(
-            `• ${b.nombre}: ${b.porcentaje}% (${b.completado}/${b.total})`,
-            m,
-            y
+            `${b.nombre}  -  ${b.porcentaje}%   (${b.completado}/${b.total})`,
+            60,
+            blockY
           );
-          y += 16;
+          blockY += 20;
         });
       }
 
@@ -182,79 +167,60 @@ const BulkReportModal: React.FC<Props> = ({
     }
   };
 
-  // ---------------------- PDF GENERAL ----------------------
+  // ---------------- PDF GENERAL ----------------
 
   const generateClassPDF = async () => {
     setLoading(true);
 
     try {
       const doc = new jsPDF("landscape", "pt", "letter");
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
+      const width = doc.internal.pageSize.getWidth();
 
-      // Fondo
       try {
-        const bg = await loadImage("/logo.png");
-        doc.addImage(bg, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
+        const logo = await loadImage("/logo.png");
+        doc.addImage(logo, "PNG", 40, 30, 100, 100);
       } catch {}
 
-      // Título
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(28);
+      doc.setFontSize(22);
       doc.setTextColor(primaryColor);
-      doc.text("📘 Reporte General de la Clase", pageWidth / 2, 60, {
+      doc.text("REPORTE GENERAL DE LA CLASE", width / 2, 60, {
         align: "center",
       });
 
       doc.setDrawColor(primaryColor);
       doc.setLineWidth(2);
-      doc.line(50, 80, pageWidth - 50, 80);
+      doc.line(40, 100, width - 40, 100);
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(14);
-      doc.setTextColor("#000");
-
-      let y = 115;
-      const m = 50;
-
-      doc.text(`👨‍🏫 Maestro: ${teacher?.username}`, m, y);
-      y += 18;
-      doc.text(`👥 Estudiantes: ${students.length}`, m, y);
-      y += 18;
-      doc.text(`📅 Fecha: ${new Date().toLocaleDateString()}`, m, y);
-      y += 28;
+      let y = 140;
+      doc.setFontSize(13);
+      doc.setTextColor(gray);
+      doc.text(`Docente: ${teacher?.username}`, 40, y);
+      doc.text(`Total Estudiantes: ${students.length}`, 40, y + 25);
+      doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 40, y + 50);
 
       if (classStats) {
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.text("📊 Estadísticas Generales", m, y);
-        y += 22;
+        doc.text("Estadísticas Generales", 400, y);
 
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(13);
-
         doc.text(
-          `• Progreso Promedio: ${classStats.averageProgress}%`,
-          m,
-          y
+          `Progreso Promedio: ${classStats.averageProgress}%`,
+          400,
+          y + 25
         );
-        y += 16;
-        doc.text(`• Puntaje Promedio: ${classStats.averageScore}`, m, y);
-        y += 16;
         doc.text(
-          `• Tasa de Finalización: ${classStats.completionRate}%`,
-          m,
-          y
+          `Puntaje Promedio: ${classStats.averageScore}`,
+          400,
+          y + 50
         );
       }
 
-      doc.save(`reporte_general.pdf`);
+      doc.save("reporte_general.pdf");
     } finally {
       setLoading(false);
     }
   };
-
-  // ---------------------- GENERAR ----------------------
 
   const handleGenerate = async () => {
     if (reportType === "general") return generateClassPDF();
@@ -276,7 +242,7 @@ const BulkReportModal: React.FC<Props> = ({
     }
   };
 
-  // ---------------------- UI ----------------------
+  // ---------------- UI ----------------
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
@@ -290,7 +256,6 @@ const BulkReportModal: React.FC<Props> = ({
           </button>
         </div>
 
-        {/* Tipo de reporte */}
         <div className="space-y-2 mb-4">
           <label className="flex items-center gap-2">
             <input
@@ -298,9 +263,7 @@ const BulkReportModal: React.FC<Props> = ({
               checked={reportType === "general"}
               onChange={() => setReportType("general")}
             />
-            <span className="flex items-center gap-2">
-              <Users className="w-4" /> Reporte General
-            </span>
+            <Users className="w-4" /> Reporte General
           </label>
 
           <label className="flex items-center gap-2">
@@ -309,13 +272,10 @@ const BulkReportModal: React.FC<Props> = ({
               checked={reportType === "individual"}
               onChange={() => setReportType("individual")}
             />
-            <span className="flex items-center gap-2">
-              <UserIcon className="w-4" /> Reporte Individual
-            </span>
+            <UserIcon className="w-4" /> Reporte Individual
           </label>
         </div>
 
-        {/* Selección de alumno */}
         {reportType === "individual" && (
           <select
             value={selectedStudent}
@@ -334,7 +294,7 @@ const BulkReportModal: React.FC<Props> = ({
         <button
           disabled={loading}
           onClick={handleGenerate}
-          className="w-full p-3 bg-blue-600 text-white rounded-xl"
+          className="w-full p-3 bg-blue-600 text-white rounded-xl font-semibold"
         >
           {loading ? "Generando..." : "Generar Reporte"}
         </button>

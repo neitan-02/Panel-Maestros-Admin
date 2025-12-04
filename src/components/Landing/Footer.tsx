@@ -17,7 +17,7 @@ const Footer: React.FC = () => {
           </p>
           <div className="border-t border-slate-800 pt-6">
             <p className="text-slate-500 font-medium">
-              © 2024 EduControl Pro. Todos los derechos reservados.
+              © 202 EduControl 
             </p>
           </div>
         </div>
